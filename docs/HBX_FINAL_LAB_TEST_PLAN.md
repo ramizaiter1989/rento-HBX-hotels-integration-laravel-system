@@ -67,12 +67,14 @@ php artisan hbx:content:sync-hotels --language=ENG --batch=50 --limit=10000
 
 With batch 50, 10,000 hotels need about 200 Hotels-list requests. The current TEST allowance is 50 requests per quota window, so this cannot finish in one window.
 
-The earlier Run 2 failed with HTTP 403, fetched 0, and left next from at 1 because the quota was exhausted.
+The earlier Run 2 failed with HTTP 403, fetched 0, and left next from at 1 because the quota was exhausted. Run 2 was created before `requested_limit` existed, so its stored target is empty. `--resume` on Run 2 is still unlimited. Do not resume Run 2 if the 10,000 ceiling must hold. Start a new `--limit=10000` run instead.
+
+A run created with `--limit=10000` stores that target. Resume continues only until `10000 - fetched`. It does not start another 10,000, and it does not become unlimited. A run that already reached the target cannot be resumed. The page checkpoint is separate from this count.
 
 Ways to accept it later:
 
-- Resume across quota resets with `php artisan hbx:content:sync-hotels --resume`.
+- Start a new limited run, then resume that same run across quota resets with `php artisan hbx:content:sync-hotels --resume`.
 - Ask HBX for a larger TEST quota.
 - Consider a larger batch only after measuring memory and confirming the supplier page size. Do not raise the batch to 1000 just because the supplier range allows it. The lab ceiling remains 100 until that measurement exists.
 
-A failed page does not move the checkpoint. A completed run cannot be resumed.
+A failed page does not move the checkpoint. A completed run, including one that reached its stored target, cannot be resumed.

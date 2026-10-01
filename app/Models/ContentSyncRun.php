@@ -28,6 +28,7 @@ class ContentSyncRun extends Model
         'language',
         'last_update_time',
         'batch_size',
+        'requested_limit',
         'supplier_total',
         'next_from',
         'fetched',
@@ -51,6 +52,7 @@ class ContentSyncRun extends Model
         return [
             'last_update_time' => 'date',
             'batch_size' => 'integer',
+            'requested_limit' => 'integer',
             'supplier_total' => 'integer',
             'next_from' => 'integer',
             'fetched' => 'integer',
@@ -75,6 +77,21 @@ class ContentSyncRun extends Model
 
     public function isResumable(): bool
     {
-        return in_array($this->status, [self::RUNNING, self::STOPPED, self::FAILED], true);
+        return in_array($this->status, [self::RUNNING, self::STOPPED, self::FAILED], true)
+            && ! $this->targetReached();
+    }
+
+    public function targetReached(): bool
+    {
+        return $this->requested_limit !== null && (int) $this->fetched >= (int) $this->requested_limit;
+    }
+
+    public function remaining(): ?int
+    {
+        if ($this->requested_limit === null) {
+            return null;
+        }
+
+        return max(0, (int) $this->requested_limit - (int) $this->fetched);
     }
 }

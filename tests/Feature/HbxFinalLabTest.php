@@ -26,6 +26,112 @@ class HbxFinalLabTest extends TestCase
     use RefreshDatabase;
 
     #[Test]
+    public function reference_sync_imports_every_catalog_once(): void
+    {
+        Http::fake(function (Request $request) {
+            $path = (string) parse_url($request->url(), PHP_URL_PATH);
+            $row = fn (array $body) => Http::response([
+                'from' => 1,
+                'to' => 1,
+                'total' => 1,
+            ] + $body, 200);
+
+            if (str_contains($path, 'facilitygroups')) {
+                return $row(['facilityGroups' => [['code' => 20, 'description' => ['content' => 'Hotel facilities']]]]);
+            }
+
+            if (str_contains($path, 'facilities')) {
+                return $row(['facilities' => [['code' => 10, 'facilityGroupCode' => 20, 'description' => ['content' => 'Wi-Fi']]]]);
+            }
+
+            if (str_contains($path, 'rooms')) {
+                return $row(['rooms' => [[
+                    'code' => 'DBL.ST',
+                    'type' => 'DBL',
+                    'characteristic' => 'ST',
+                    'description' => ['content' => 'Double standard'],
+                    'minPax' => 1,
+                    'maxPax' => 2,
+                ]]]);
+            }
+
+            if (str_contains($path, 'groupcategories')) {
+                return $row(['groupCategories' => [['code' => 'GRUPO1', 'description' => ['content' => 'Stars']]]]);
+            }
+
+            if (str_contains($path, 'categories')) {
+                return $row(['categories' => [['code' => '4EST', 'group' => 'GRUPO1', 'description' => ['content' => '4 stars']]]]);
+            }
+
+            if (str_contains($path, 'chains')) {
+                return $row(['chains' => [['code' => 'CHAIN', 'description' => ['content' => 'Chain']]]]);
+            }
+
+            if (str_contains($path, 'accommodations')) {
+                return $row(['accommodations' => [['code' => 'HOTEL', 'description' => ['content' => 'Hotel']]]]);
+            }
+
+            if (str_contains($path, 'boards')) {
+                return $row(['boards' => [['code' => 'BB', 'description' => ['content' => 'Bed and breakfast']]]]);
+            }
+
+            if (str_contains($path, 'segments')) {
+                return $row(['segments' => [['code' => 100, 'description' => ['content' => 'Beach']]]]);
+            }
+
+            if (str_contains($path, 'imagetypes')) {
+                return $row(['imageTypes' => [['code' => 'GEN', 'description' => ['content' => 'General']]]]);
+            }
+
+            if (str_contains($path, 'countries')) {
+                return $row(['countries' => [['code' => 'ES', 'description' => ['content' => 'Spain']]]]);
+            }
+
+            if (str_contains($path, 'destinations')) {
+                return $row(['destinations' => [[
+                    'code' => 'PMI',
+                    'countryCode' => 'ES',
+                    'description' => ['content' => 'Palma'],
+                    'zones' => [['zoneCode' => 10, 'name' => 'Centre']],
+                ]]]);
+            }
+
+            return Http::response(['error' => 'unexpected'], 500);
+        });
+
+        $this->artisan('hbx:content:sync-reference', ['--language' => 'ENG', '--batch' => 10])->assertSuccessful();
+        $this->artisan('hbx:content:sync-reference', ['--language' => 'ENG', '--batch' => 10])->assertSuccessful();
+
+        $tables = [
+            'content_ref_facility_groups',
+            'content_ref_facilities',
+            'content_ref_rooms',
+            'content_ref_room_types',
+            'content_ref_room_characteristics',
+            'content_ref_categories',
+            'content_ref_category_groups',
+            'content_ref_chains',
+            'content_ref_accommodation_types',
+            'content_ref_boards',
+            'content_ref_segments',
+            'content_ref_image_types',
+            'content_ref_countries',
+            'content_ref_destinations',
+            'content_ref_zones',
+        ];
+
+        foreach ($tables as $table) {
+            $this->assertSame(1, \Illuminate\Support\Facades\DB::table($table)->count(), $table);
+        }
+
+        $this->assertSame('DBL.ST', \Illuminate\Support\Facades\DB::table('content_ref_rooms')->value('code'));
+        $this->assertSame('DBL', \Illuminate\Support\Facades\DB::table('content_ref_room_types')->value('code'));
+        $this->assertSame('ST', \Illuminate\Support\Facades\DB::table('content_ref_room_characteristics')->value('code'));
+        $this->assertSame('PMI', \Illuminate\Support\Facades\DB::table('content_ref_zones')->value('destination_code'));
+        $this->assertSame(10, (int) \Illuminate\Support\Facades\DB::table('content_ref_zones')->value('zone_code'));
+    }
+
+    #[Test]
     public function reference_sync_imports_updates_and_keeps_languages_apart(): void
     {
         $english = 'Wi-Fi';
@@ -370,6 +476,9 @@ class HbxFinalLabTest extends TestCase
         $this->get('/developer/hbx/sync')
             ->assertOk()
             ->assertSee('php artisan hbx:content:sync-reference --language=ENG')
+            ->assertSee('Requested target')
+            ->assertSee('Fetched total')
+            ->assertSee('Remaining')
             ->assertSee('No sync runs stored')
             ->assertDontSee('test-api-key')
             ->assertDontSee('test-secret');

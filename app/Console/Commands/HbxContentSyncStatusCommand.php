@@ -37,7 +37,9 @@ class HbxContentSyncStatusCommand extends Command
             $this->line('Batch: '.$run->batch_size);
             $this->line('Next from: '.$run->next_from);
             $this->line('Supplier total: '.($run->supplier_total ?? 'unknown'));
-            $this->line('Fetched: '.$run->fetched);
+            $this->line('Requested target: '.($run->requested_limit === null ? 'none' : (string) $run->requested_limit));
+            $this->line('Fetched total: '.$run->fetched);
+            $this->line('Remaining: '.($run->remaining() === null ? 'none' : (string) $run->remaining()));
             $this->line('Imported: '.$run->imported);
             $this->line('Updated: '.$run->updated);
             $this->line('Unchanged: '.$run->unchanged);

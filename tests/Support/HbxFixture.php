@@ -60,7 +60,7 @@ final class HbxFixture
         ], JSON_THROW_ON_ERROR);
     }
 
-    public static function checkRate(string $rateKey): string
+    public static function checkRate(string $rateKey, string $net = '121.18'): string
     {
         return json_encode([
             'auditData' => ['processTime' => '15', 'timestamp' => '2026-09-27 12:05:00.000'],
@@ -76,7 +76,7 @@ final class HbxFixture
                         'rateKey' => $rateKey,
                         'rateClass' => 'NOR',
                         'rateType' => 'BOOKABLE',
-                        'net' => '121.18',
+                        'net' => $net,
                         'allotment' => 40,
                         'paymentType' => 'AT_WEB',
                         'packaging' => false,

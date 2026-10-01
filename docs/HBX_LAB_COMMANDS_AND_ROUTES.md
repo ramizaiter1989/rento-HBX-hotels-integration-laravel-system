@@ -13,7 +13,7 @@ Supplier call means the action contacts HBX. Commercial write means the action c
 | `php artisan hbx:content:hotel {code} --language=ENG --import` | Fetch Hotel Details and store it | Yes | No |
 | `php artisan hbx:content:hotels --from=1 --to=10 --language=ENG` | Read one Hotels list page without importing | Yes | No |
 | `php artisan hbx:content:sync-hotels --language=ENG --batch=50` | Full resumable content sync | Yes | No |
-| `php artisan hbx:content:sync-hotels --language=ENG --batch=50 --limit=1000` | Full sync stopped after 1000 hotels | Yes | No |
+| `php artisan hbx:content:sync-hotels --language=ENG --batch=50 --limit=1000` | Full sync with a stored target of 1000 hotels | Yes | No |
 | `php artisan hbx:content:sync-hotels --language=ENG --last-update=YYYY-MM-DD` | Differential sync | Yes | No |
 | `php artisan hbx:content:sync-hotels --resume` | Resume the latest full run | Yes | No |
 | `php artisan hbx:content:sync-hotels --resume --last-update=YYYY-MM-DD` | Resume the matching differential run | Yes | No |
@@ -23,6 +23,8 @@ Supplier call means the action contacts HBX. Commercial write means the action c
 | `php artisan hbx:content:sync-reference --language=ENG --type=facilities` | Import one catalog | Yes | No |
 | `php artisan hbx:availability:cleanup` | Delete expired availability snapshots past retention | No | No |
 | `php artisan test` | Automated suite. Must not call HBX | No | No |
+
+`--limit` on a new run is the stored hotel target. Resume uses the remaining amount (`requested_limit - fetched`) and ignores a new `--limit`. A completed target cannot be resumed. A command without `--limit` is an explicit unlimited sync. `hbx:content:sync-status` and the sync dashboard show Requested target, Fetched total, and Remaining.
 
 `--type=zones` reads destinations, because zones are nested in that payload. `--type=room-types` and `--type=room-characteristics` read the rooms catalog. There is no separate characteristic-description endpoint.
 

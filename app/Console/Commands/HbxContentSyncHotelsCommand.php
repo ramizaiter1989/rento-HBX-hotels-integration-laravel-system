@@ -20,7 +20,7 @@ class HbxContentSyncHotelsCommand extends Command implements SignalableCommandIn
         {--language=ENG : Content language code. ENG is the structural language}
         {--batch= : Hotels per request. Defaults to the configured batch. Maximum 100}
         {--from=1 : First result position, starting at 1}
-        {--limit= : Stop after this many hotels in this invocation}
+        {--limit= : Hotel target for a new run. Resume keeps the stored target}
         {--last-update= : Send lastUpdateTime as YYYY-MM-DD}
         {--resume : Continue the latest stopped, failed, or interrupted run}';
 
@@ -53,10 +53,15 @@ class HbxContentSyncHotelsCommand extends Command implements SignalableCommandIn
             $lastUpdate = $this->option('last-update');
             $lastUpdate = is_string($lastUpdate) ? trim($lastUpdate) : null;
             $lastUpdate = $hotels->lastUpdateTime($lastUpdate === '' ? null : $lastUpdate);
-            $limit = $this->optionalWholeNumber('limit', 'Content sync limit must be a whole number of hotels.');
+            $requestedLimit = $this->optionalWholeNumber('limit', 'Content sync limit must be a whole number of hotels.');
+
+            if ($resume && $requestedLimit !== null) {
+                $this->warn('The --limit option is ignored on resume. The stored target is used.');
+            }
+
             $run = $resume
                 ? $this->runToResume($language, $lastUpdate)
-                : $this->startRun($language, $this->batch(), $this->wholeNumber('from', 'Content sync from must start at 1 or later.'), $lastUpdate);
+                : $this->startRun($language, $this->batch(), $this->wholeNumber('from', 'Content sync from must start at 1 or later.'), $lastUpdate, $requestedLimit);
         } catch (Throwable $exception) {
             $this->error($exception->getMessage());
 
@@ -67,6 +72,7 @@ class HbxContentSyncHotelsCommand extends Command implements SignalableCommandIn
         $batch = $run->batch_size;
         $from = $run->next_from;
         $lastUpdate = $run->last_update_time?->format('Y-m-d');
+        $limit = $run->remaining();
 
         $this->line('Run: '.$run->id);
         $this->line('Type: '.$run->sync_type);
@@ -74,7 +80,9 @@ class HbxContentSyncHotelsCommand extends Command implements SignalableCommandIn
         $this->line('Language: '.$language);
         $this->line('Batch: '.$batch);
         $this->line('From: '.$from);
-        $this->line('Limit: '.($limit === null ? 'none' : (string) $limit));
+        $this->line('Requested target: '.($run->requested_limit === null ? 'none' : (string) $run->requested_limit));
+        $this->line('Fetched total: '.$run->fetched);
+        $this->line('Remaining: '.($limit === null ? 'none' : (string) $limit));
         $this->line('lastUpdateTime: '.($lastUpdate ?? 'not sent'));
 
         try {
@@ -117,13 +125,14 @@ class HbxContentSyncHotelsCommand extends Command implements SignalableCommandIn
         return ($result->failed > 0 || $result->stopped) ? self::FAILURE : self::SUCCESS;
     }
 
-    private function startRun(string $language, int $batch, int $from, ?string $lastUpdate): ContentSyncRun
+    private function startRun(string $language, int $batch, int $from, ?string $lastUpdate, ?int $requestedLimit): ContentSyncRun
     {
         $run = ContentSyncRun::query()->create([
             'sync_type' => $lastUpdate === null ? ContentSyncRun::FULL : ContentSyncRun::DIFFERENTIAL,
             'language' => $language,
             'last_update_time' => $lastUpdate,
             'batch_size' => $batch,
+            'requested_limit' => $requestedLimit,
             'next_from' => $from,
             'status' => ContentSyncRun::RUNNING,
             'started_at' => now(),
@@ -158,9 +167,13 @@ class HbxContentSyncHotelsCommand extends Command implements SignalableCommandIn
             );
         }
 
-        if ($run->status === ContentSyncRun::COMPLETED) {
+        if ($run->status === ContentSyncRun::COMPLETED || $run->targetReached()) {
+            $reason = $run->targetReached()
+                ? 'already reached its requested limit and cannot be resumed.'
+                : 'is completed and cannot be resumed.';
+
             throw new HbxValidationException(
-                'The latest '.$type.' content sync run is completed and cannot be resumed.',
+                'The latest '.$type.' content sync run '.$reason,
                 'INVALID_DATA',
                 null,
                 [],

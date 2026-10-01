@@ -73,8 +73,8 @@ final class HbxContentHotelSyncService
             }
 
             if ($limit !== null && $sessionFetched >= $limit) {
-                $finishStatus = ContentSyncRun::STOPPED;
-                $finishReason = 'Content sync stopped after the requested limit.';
+                $finishStatus = ContentSyncRun::COMPLETED;
+                $finishReason = 'Content sync reached the requested limit.';
                 break;
             }
 
@@ -92,8 +92,8 @@ final class HbxContentHotelSyncService
             }
 
             if ($window < 1) {
-                $finishStatus = ContentSyncRun::STOPPED;
-                $finishReason = 'Content sync stopped after the requested limit.';
+                $finishStatus = ContentSyncRun::COMPLETED;
+                $finishReason = 'Content sync reached the requested limit.';
                 break;
             }
 

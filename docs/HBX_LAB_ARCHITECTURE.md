@@ -26,6 +26,8 @@ flowchart TD
 
 Hotel list pages and Hotel Details use the same importer. A page is checkpointed only after every hotel on that page has been processed. A failed HTTP page does not advance `next_from`. Replaying a page is idempotent.
 
+`--limit` is stored on the run as `requested_limit`. `fetched` is the cumulative total. Resume continues only until `requested_limit - fetched` reaches zero. That ceiling is separate from the page checkpoint. Omitting `--limit` stores no target, and that run stays unlimited. A run that already reached its target cannot be resumed. Runs created before this column have a null target, so they stay unlimited.
+
 Reference catalogs use GET only. They upsert by supplier code. They do not use the hotel page checkpoint. Running the reference command again updates changed descriptions and leaves unchanged rows in place.
 
 ## Search

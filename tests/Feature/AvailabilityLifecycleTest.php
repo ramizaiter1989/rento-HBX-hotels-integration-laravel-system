@@ -293,7 +293,7 @@ class AvailabilityLifecycleTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-09-27 12:00:00'));
         Http::fake([
             'https://api.test.hotelbeds.com/hotel-api/1.0/hotels' => Http::response(HbxFixture::availability('RATEKEY-ORIGINAL'), 200),
-            'https://api.test.hotelbeds.com/hotel-api/1.0/checkrates' => Http::response(HbxFixture::checkRate('RATEKEY-CHECKED'), 200),
+            'https://api.test.hotelbeds.com/hotel-api/1.0/checkrates' => Http::response(HbxFixture::checkRate('RATEKEY-CHECKED', '140.00'), 200),
             'https://api.test.hotelbeds.com/hotel-api/1.0/bookings' => Http::response(HbxFixture::booking('1-9000001'), 200),
         ]);
 
@@ -304,6 +304,9 @@ class AvailabilityLifecycleTest extends TestCase
         $selection = RateSelection::query()->firstOrFail();
         $this->assertSame('RATEKEY-ORIGINAL', $selection->original_rate_key);
         $this->assertSame('RATEKEY-CHECKED', $selection->rate_key);
+        $this->assertSame('121.18', $selection->availability_net);
+        $this->assertSame('140.00', $selection->net);
+        $this->get(route('hotels.results', $search))->assertSee('Price changed');
         $this->assertNotNull($selection->checkrate_completed_at);
         $this->assertSame('2026-09-27 12:05:00', $selection->valid_until?->toDateTimeString());
 

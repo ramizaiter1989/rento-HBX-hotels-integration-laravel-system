@@ -6,9 +6,15 @@ The lab UI, developer pages, and single-operator routes are here so the HBX beha
 
 ## Ownership
 
-HBX owns:
+HBX is the upstream source of truth for supplier hotel content, availability, prices, rateKeys, cancellation rules, and supplier booking state.
 
-- the supplier hotel catalog source
+Rento stores and serves its own normalized synchronized Content copy. Rento also maintains its own booking, customer, and business records.
+
+The production customer UI reads that synchronized Content copy. It does not query HBX Content directly. Live supplier calls from the customer path are availability, CheckRate, booking, cancellation, and later a verified modification. Content browsing, labels, and hotel detail pages come from the local copy.
+
+HBX remains the source for:
+
+- supplier hotel content
 - supplier room inventory
 - live availability
 - supplier prices
@@ -16,11 +22,11 @@ HBX owns:
 - supplier cancellation rules
 - supplier booking status
 
-Rento owns:
+Rento remains the source for:
 
 - customer accounts
 - UX
-- the normalized content database
+- the normalized synchronized content database
 - local hotel enrichment
 - the availability cache
 - markup and pricing rules

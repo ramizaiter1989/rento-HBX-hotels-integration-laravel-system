@@ -58,7 +58,9 @@
                     <th class="px-3 py-3">Language</th>
                     <th class="px-3 py-3">Total</th>
                     <th class="px-3 py-3">Next from</th>
-                    <th class="px-3 py-3">Fetched</th>
+                    <th class="px-3 py-3">Requested target</th>
+                    <th class="px-3 py-3">Fetched total</th>
+                    <th class="px-3 py-3">Remaining</th>
                     <th class="px-3 py-3">Imported</th>
                     <th class="px-3 py-3">Updated</th>
                     <th class="px-3 py-3">Unchanged</th>
@@ -80,7 +82,9 @@
                         <td class="px-3 py-3">{{ $run->language }}</td>
                         <td class="px-3 py-3">{{ $run->supplier_total ?? '—' }}</td>
                         <td class="px-3 py-3">{{ $run->next_from }}</td>
+                        <td class="px-3 py-3">{{ $run->requested_limit ?? 'none' }}</td>
                         <td class="px-3 py-3">{{ $run->fetched }}</td>
+                        <td class="px-3 py-3">{{ $run->remaining() === null ? 'none' : $run->remaining() }}</td>
                         <td class="px-3 py-3">{{ $run->imported }}</td>
                         <td class="px-3 py-3">{{ $run->updated }}</td>
                         <td class="px-3 py-3">{{ $run->unchanged }}</td>
@@ -93,7 +97,7 @@
                         <td class="px-3 py-3">{{ $run->last_update_time?->toDateString() ?? '—' }}</td>
                     </tr>
                 @empty
-                    <tr><td class="px-3 py-6 text-slate-600" colspan="17">No sync runs stored.</td></tr>
+                    <tr><td class="px-3 py-6 text-slate-600" colspan="19">No sync runs stored.</td></tr>
                 @endforelse
             </tbody>
         </table>
