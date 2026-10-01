@@ -37,6 +37,7 @@
 
     <section class="card mb-6 p-5">
         <h2 class="text-base font-semibold">Commands</h2>
+        <p class="mt-1 max-w-3xl text-sm text-slate-600">Abandon a failed or stopped run only. If a run is still running, use sync-stop and wait until its status is stopped.</p>
         <div class="mt-3 space-y-3">
             @foreach ($commands as $label => $command)
                 <div>

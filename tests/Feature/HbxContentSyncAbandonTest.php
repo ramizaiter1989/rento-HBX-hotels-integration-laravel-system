@@ -6,6 +6,7 @@ use App\Models\ContentHotel;
 use App\Models\ContentSyncRun;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -13,6 +14,88 @@ use Tests\TestCase;
 class HbxContentSyncAbandonTest extends TestCase
 {
     use RefreshDatabase;
+
+    #[Test]
+    public function an_actively_running_run_cannot_be_directly_abandoned(): void
+    {
+        $abandonExit = null;
+        Http::fake(function () use (&$abandonExit) {
+            $run = ContentSyncRun::query()->firstOrFail();
+            $this->assertSame(ContentSyncRun::RUNNING, $run->status);
+            $before = [
+                'fetched' => $run->fetched,
+                'next_from' => $run->next_from,
+                'imported' => $run->imported,
+                'http_requests' => $run->http_requests,
+            ];
+
+            $abandonExit = Artisan::call('hbx:content:sync-abandon', ['run' => (string) $run->id]);
+
+            $run->refresh();
+            $this->assertSame(ContentSyncRun::RUNNING, $run->status);
+            $this->assertSame($before, [
+                'fetched' => $run->fetched,
+                'next_from' => $run->next_from,
+                'imported' => $run->imported,
+                'http_requests' => $run->http_requests,
+            ]);
+
+            $run->forceFill(['stop_requested' => true])->save();
+
+            return Http::response([
+                'from' => 1,
+                'to' => 1,
+                'total' => 10,
+                'hotels' => [[
+                    'code' => 1,
+                    'name' => ['content' => 'Hotel 1'],
+                    'countryCode' => 'ES',
+                ]],
+            ], 200);
+        });
+
+        $this->artisan('hbx:content:sync-hotels', ['--batch' => 1, '--limit' => 4])
+            ->expectsOutputToContain('Status: stopped')
+            ->assertSuccessful();
+
+        $this->assertSame(1, $abandonExit);
+
+        $run = ContentSyncRun::query()->firstOrFail();
+        $this->assertSame(ContentSyncRun::STOPPED, $run->status);
+        $this->assertSame(1, $run->fetched);
+        $this->assertSame(2, $run->next_from);
+
+        $this->artisan('hbx:content:sync-abandon', ['run' => (string) $run->id])
+            ->expectsOutputToContain('Status: abandoned')
+            ->assertSuccessful();
+        $this->assertSame(ContentSyncRun::ABANDONED, $run->refresh()->status);
+        $this->assertSame(1, $run->fetched);
+        $this->assertSame(2, $run->next_from);
+    }
+
+    #[Test]
+    public function a_running_run_tells_the_operator_to_stop_before_abandoning(): void
+    {
+        $run = $this->storedRun(ContentSyncRun::RUNNING, [
+            'fetched' => 12,
+            'next_from' => 13,
+            'imported' => 4,
+            'http_requests' => 2,
+        ]);
+
+        $this->artisan('hbx:content:sync-abandon', ['run' => (string) $run->id])
+            ->expectsOutputToContain('is running and cannot be abandoned')
+            ->expectsOutputToContain('php artisan hbx:content:sync-stop')
+            ->expectsOutputToContain('php artisan hbx:content:sync-abandon '.$run->id)
+            ->assertFailed();
+
+        $run->refresh();
+        $this->assertSame(ContentSyncRun::RUNNING, $run->status);
+        $this->assertSame(12, $run->fetched);
+        $this->assertSame(13, $run->next_from);
+        $this->assertSame(4, $run->imported);
+        $this->assertSame(2, $run->http_requests);
+    }
 
     #[Test]
     public function a_failed_run_can_be_abandoned_without_losing_statistics_or_content(): void
@@ -55,7 +138,8 @@ class HbxContentSyncAbandonTest extends TestCase
         $this->get('/developer/hbx/sync')
             ->assertOk()
             ->assertSee('abandoned')
-            ->assertSee('php artisan hbx:content:sync-abandon {run}');
+            ->assertSee('php artisan hbx:content:sync-abandon {run}')
+            ->assertSee('wait until its status is stopped');
 
         Http::fake();
         $this->artisan('hbx:content:sync-hotels', ['--resume' => true])

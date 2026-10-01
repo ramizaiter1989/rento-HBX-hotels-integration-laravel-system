@@ -11,7 +11,7 @@ class HbxContentSyncAbandonCommand extends Command
 {
     protected $signature = 'hbx:content:sync-abandon {run : Sync run id to close without deleting it}';
 
-    protected $description = 'Close a resumable content sync so it cannot be resumed. Statistics stay stored.';
+    protected $description = 'Close a failed or stopped content sync so it cannot be resumed. A running sync must be stopped first.';
 
     public function handle(): int
     {
@@ -31,7 +31,15 @@ class HbxContentSyncAbandonCommand extends Command
             return self::FAILURE;
         }
 
-        if (! $run->isResumable()) {
+        if ($run->status === ContentSyncRun::RUNNING) {
+            $this->error('Content sync run '.$run->id.' is running and cannot be abandoned.');
+            $this->error('Stop the worker first with: php artisan hbx:content:sync-stop');
+            $this->error('After the run status is stopped, run: php artisan hbx:content:sync-abandon '.$run->id);
+
+            return self::FAILURE;
+        }
+
+        if (! in_array($run->status, [ContentSyncRun::FAILED, ContentSyncRun::STOPPED], true)) {
             $this->error('Content sync run '.$run->id.' is '.$run->status.' and cannot be abandoned.');
 
             return self::FAILURE;
