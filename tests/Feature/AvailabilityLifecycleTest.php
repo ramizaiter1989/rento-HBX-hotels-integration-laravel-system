@@ -50,7 +50,8 @@ class AvailabilityLifecycleTest extends TestCase
         $page = $this->get(route('hotels.results', $search));
         $page->assertOk();
         $page->assertSee('Fresh HBX availability received.');
-        $page->assertSee('Fresh HBX call');
+        $page->assertSee('Availability source');
+        $page->assertSee('LIVE');
         $page->assertSee('2026-09-27 12:01:00');
     }
 

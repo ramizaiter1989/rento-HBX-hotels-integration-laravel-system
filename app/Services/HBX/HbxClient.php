@@ -308,7 +308,7 @@ final class HbxClient
     private function isContentRead(string $method, string $operation): bool
     {
         return strtoupper($method) === 'GET'
-            && in_array($operation, ['content_hotels', 'content_hotel_detail'], true);
+            && in_array($operation, ['content_hotels', 'content_hotel_detail', 'content_reference'], true);
     }
 
     private function shouldRetryContentHttp(string $method, string $operation, int $status): bool
@@ -389,7 +389,7 @@ final class HbxClient
             ]);
         }
 
-        if ($operation === 'content_hotels') {
+        if ($operation === 'content_hotels' || $operation === 'content_reference') {
             return $this->contentHotelsLogSummary($raw, $data);
         }
 
@@ -412,8 +412,25 @@ final class HbxClient
             'to' => isset($data['to']) && is_numeric($data['to']) ? (int) $data['to'] : null,
             'total' => is_numeric($total) ? (int) $total : null,
             'hotelsReturned' => count($hotels),
+            'itemsReturned' => $this->listedItemCount($data),
             'processTime' => isset($audit['processTime']) ? (string) $audit['processTime'] : null,
             'timestamp' => isset($audit['timestamp']) ? (string) $audit['timestamp'] : null,
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function listedItemCount(array $data): int
+    {
+        $count = 0;
+
+        foreach ($data as $value) {
+            if (is_array($value) && array_is_list($value)) {
+                $count = max($count, count($value));
+            }
+        }
+
+        return $count;
     }
 }

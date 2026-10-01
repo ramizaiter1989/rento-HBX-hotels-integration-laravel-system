@@ -1,4 +1,4 @@
-@props(['rows', 'roomCode' => null])
+@props(['rows', 'roomCode' => null, 'labels' => [], 'groupLabels' => []])
 
 <div class="overflow-x-auto">
     <table class="min-w-full text-left text-sm">
@@ -24,8 +24,18 @@
                     @if ($roomCode !== null)
                         <td class="px-4 py-3 font-mono text-xs">{{ $roomCode }}</td>
                     @endif
-                    <td class="px-4 py-3">{{ $row->facility_code }}</td>
-                    <td class="px-4 py-3">{{ $row->facility_group_code }}</td>
+                    <td class="px-4 py-3">
+                        <span class="font-mono text-xs">{{ $row->facility_code }}</span>
+                        @if ($name = ($labels[$row->facility_code.':'.$row->facility_group_code] ?? null))
+                            <span class="mt-1 block text-slate-700">{{ $name }}</span>
+                        @endif
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="font-mono text-xs">{{ $row->facility_group_code }}</span>
+                        @if ($groupLabel = ($groupLabels[$row->facility_group_code] ?? null))
+                            <span class="mt-1 block text-slate-700">{{ $groupLabel }}</span>
+                        @endif
+                    </td>
                     <td class="px-4 py-3">{{ $row->sort_order ?? '—' }}</td>
                     <td class="px-4 py-3">{{ $row->number_value ?? '—' }}</td>
                     <td class="px-4 py-3">{{ $row->distance ?? '—' }}</td>

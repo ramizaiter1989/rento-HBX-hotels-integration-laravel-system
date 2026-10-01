@@ -21,6 +21,7 @@ class HotelSearch extends Model
         'request_payload',
         'response_payload',
         'hotels_returned',
+        'availability_source',
         'search_fingerprint',
         'expires_at',
         'last_accessed_at',

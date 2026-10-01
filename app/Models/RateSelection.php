@@ -28,6 +28,7 @@ class RateSelection extends Model
         'rate_type',
         'rate_class',
         'net',
+        'availability_net',
         'currency',
         'allotment',
         'board_code',
@@ -48,6 +49,7 @@ class RateSelection extends Model
     {
         return [
             'net' => 'decimal:2',
+            'availability_net' => 'decimal:2',
             'packaging' => 'boolean',
             'payment_data_required' => 'boolean',
             'checkrate_completed_at' => 'datetime',

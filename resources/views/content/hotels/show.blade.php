@@ -49,12 +49,12 @@
                     'Address' => trim(implode(', ', array_filter([$translation->address_line ?? null, $translation->address_street ?? null, $hotel->address_number]))) ?: '—',
                     'City' => $translation->city ?? '—',
                     'Postal code' => $hotel->postal_code ?: '—',
-                    'Country' => trim(($hotel->country_code ?: '').($hotel->country_iso_code ? ' · ISO '.$hotel->country_iso_code : '')) ?: '—',
-                    'Destination' => trim(($hotel->destination_code ?: '').($hotel->destination_country_code ? ' · '.$hotel->destination_country_code : '')) ?: '—',
+                    'Country' => trim(($hotel->country_code ?: '').($labels['countries'][$hotel->country_code] ?? null ? ' · '.$labels['countries'][$hotel->country_code] : '').($hotel->country_iso_code ? ' · ISO '.$hotel->country_iso_code : '')) ?: '—',
+                    'Destination' => trim(($hotel->destination_code ?: '').($labels['destinations'][$hotel->destination_code] ?? null ? ' · '.$labels['destinations'][$hotel->destination_code] : '').($hotel->destination_country_code ? ' · '.$hotel->destination_country_code : '').($hotel->zone_code ? ' · zone '.$hotel->zone_code : '').($labels['zones'] ? ' · '.$labels['zones'] : '')) ?: '—',
                     'Coordinates' => ($hotel->latitude !== null && $hotel->longitude !== null) ? $hotel->latitude.', '.$hotel->longitude : '—',
-                    'Category' => trim(($hotel->category_code ?: '').($hotel->category_group_code ? ' · '.$hotel->category_group_code : '')) ?: '—',
-                    'Chain' => $hotel->chain_code ?: '—',
-                    'Accommodation' => $hotel->accommodation_type_code ?: '—',
+                    'Category' => trim(($hotel->category_code ?: '').($labels['categories'][$hotel->category_code] ?? null ? ' · '.$labels['categories'][$hotel->category_code] : '').($hotel->category_group_code ? ' · '.$hotel->category_group_code : '').($labels['category_groups'][$hotel->category_group_code] ?? null ? ' · '.$labels['category_groups'][$hotel->category_group_code] : '')) ?: '—',
+                    'Chain' => trim(($hotel->chain_code ?: '').($labels['chains'][$hotel->chain_code] ?? null ? ' · '.$labels['chains'][$hotel->chain_code] : '')) ?: '—',
+                    'Accommodation' => trim(($hotel->accommodation_type_code ?: '').($labels['accommodations'][$hotel->accommodation_type_code] ?? null ? ' · '.$labels['accommodations'][$hotel->accommodation_type_code] : '')) ?: '—',
                     'Ranking' => $hotel->ranking === null ? '—' : (string) $hotel->ranking,
                     'License' => $hotel->license ?: '—',
                     'Origin' => $origin ?? '—',
@@ -109,9 +109,24 @@
                         @forelse ($hotel->rooms as $room)
                             @php $roomTranslation = $room->translations->first(); @endphp
                             <tr class="border-t border-slate-100">
-                                <td class="px-4 py-3 font-mono text-xs">{{ $room->room_code }}</td>
-                                <td class="px-4 py-3">{{ $room->type_code }}</td>
-                                <td class="px-4 py-3">{{ $room->characteristic_code }}</td>
+                                <td class="px-4 py-3 font-mono text-xs">
+                                    {{ $room->room_code }}
+                                    @if ($catalog = ($labels['rooms'][$room->room_code] ?? null))
+                                        <span class="mt-1 block font-sans text-slate-500">{{ $catalog }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3">
+                                    {{ $room->type_code }}
+                                    @if ($typeLabel = ($labels['room_types'][$room->type_code] ?? null))
+                                        <span class="mt-1 block text-xs text-slate-500">{{ $typeLabel }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3">
+                                    {{ $room->characteristic_code }}
+                                    @if ($characteristicLabel = ($labels['room_characteristics'][$room->characteristic_code] ?? null))
+                                        <span class="mt-1 block text-xs text-slate-500">{{ $characteristicLabel }}</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3">{{ $room->pms_room_code ?: '—' }}</td>
                                 <td class="px-4 py-3">{{ $roomTranslation->description ?? '—' }}</td>
                                 <td class="px-4 py-3">{{ $roomTranslation->commercial_description ?? '—' }}</td>
@@ -149,7 +164,12 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 break-all font-mono text-xs">{{ $image->path }}</td>
-                                <td class="px-4 py-3">{{ $image->image_type_code }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="font-mono text-xs">{{ $image->image_type_code }}</span>
+                                    @if ($imageLabel = ($labels['image_types'][$image->image_type_code] ?? null))
+                                        <span class="mt-1 block">{{ $imageLabel }}</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3">{{ $image->visual_order }}</td>
                                 <td class="px-4 py-3 font-mono text-xs">{{ $image->room_code ?: '—' }}</td>
                                 <td class="px-4 py-3">{{ $image->source_position }}</td>
@@ -163,7 +183,7 @@
         </section>
 
         <section class="sm:col-span-2 lg:col-span-3" x-show="tab === 'facilities'" x-cloak>
-            <x-content.facilities :rows="$hotel->facilities" />
+            <x-content.facilities :rows="$hotel->facilities" :labels="$labels['facilities']" :group-labels="$labels['facility_groups']" />
         </section>
 
         <section class="sm:col-span-2 lg:col-span-3" x-show="tab === 'room-facilities'" x-cloak>
@@ -192,7 +212,12 @@
                             @foreach ($roomFacilities as $item)
                                 <tr class="border-t border-slate-100">
                                     <td class="px-4 py-3 font-mono text-xs">{{ $item['room'] }}</td>
-                                    <td class="px-4 py-3">{{ $item['facility']->facility_code }}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="font-mono text-xs">{{ $item['facility']->facility_code }}</span>
+                                        @if ($facilityLabel = ($labels['facilities'][$item['facility']->facility_code.':'.$item['facility']->facility_group_code] ?? null))
+                                            <span class="mt-1 block">{{ $facilityLabel }}</span>
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-3">{{ $item['facility']->facility_group_code }}</td>
                                     <td class="px-4 py-3">{{ $item['facility']->sort_order ?? '—' }}</td>
                                     <td class="px-4 py-3">{{ $item['facility']->number_value ?? '—' }}</td>
@@ -217,7 +242,7 @@
                     @foreach ($stays as $item)
                         <div class="rounded-md border border-slate-200">
                             <p class="px-4 py-3 text-sm font-medium">{{ $item['room'] }} · {{ $item['stay']->stay_type }} · order {{ $item['stay']->stay_order }}</p>
-                            <x-content.facilities :rows="$item['stay']->facilities" />
+                            <x-content.facilities :rows="$item['stay']->facilities" :labels="$labels['facilities']" :group-labels="$labels['facility_groups']" />
                         </div>
                     @endforeach
                 </div>
@@ -245,7 +270,14 @@
                     <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-4 py-3">Board code</th></tr></thead>
                     <tbody>
                         @forelse ($hotel->boards as $board)
-                            <tr class="border-t border-slate-100"><td class="px-4 py-3">{{ $board->board_code }}</td></tr>
+                            <tr class="border-t border-slate-100">
+                                <td class="px-4 py-3">
+                                    <span class="font-mono text-xs">{{ $board->board_code }}</span>
+                                    @if ($boardLabel = ($labels['boards'][$board->board_code] ?? null))
+                                        <span class="ml-2">{{ $boardLabel }}</span>
+                                    @endif
+                                </td>
+                            </tr>
                         @empty
                             <tr><td class="px-4 py-6 text-slate-600">No boards stored.</td></tr>
                         @endforelse
@@ -260,7 +292,14 @@
                     <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-4 py-3">Segment code</th></tr></thead>
                     <tbody>
                         @forelse ($hotel->segments as $segment)
-                            <tr class="border-t border-slate-100"><td class="px-4 py-3">{{ $segment->segment_code }}</td></tr>
+                            <tr class="border-t border-slate-100">
+                                <td class="px-4 py-3">
+                                    <span class="font-mono text-xs">{{ $segment->segment_code }}</span>
+                                    @if ($segmentLabel = ($labels['segments'][$segment->segment_code] ?? null))
+                                        <span class="ml-2">{{ $segmentLabel }}</span>
+                                    @endif
+                                </td>
+                            </tr>
                         @empty
                             <tr><td class="px-4 py-6 text-slate-600">No segments stored.</td></tr>
                         @endforelse

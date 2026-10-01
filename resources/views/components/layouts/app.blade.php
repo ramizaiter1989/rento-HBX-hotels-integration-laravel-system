@@ -21,6 +21,8 @@
                     'hotels.search' => 'Hotel Search',
                     'bookings.index' => 'Bookings',
                     'content.hotels.index' => 'Content',
+                    'developer.sync' => 'Sync',
+                    'developer.test-matrix' => 'Test matrix',
                     'hbx.status' => 'HBX Status',
                     'developer.logs' => 'HBX API Logs',
                     'developer.reference' => 'Developer Reference',

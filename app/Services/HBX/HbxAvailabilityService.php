@@ -26,7 +26,10 @@ final class HbxAvailabilityService
             ->first();
 
         if ($fresh instanceof HotelSearch) {
-            $fresh->forceFill(['last_accessed_at' => Carbon::now()])->save();
+            $fresh->forceFill([
+                'last_accessed_at' => Carbon::now(),
+                'availability_source' => AvailabilitySearchResult::CACHE_HIT,
+            ])->save();
 
             return new AvailabilitySearchResult($fresh, AvailabilitySearchResult::CACHE_HIT);
         }
@@ -54,6 +57,7 @@ final class HbxAvailabilityService
             'request_payload' => JsonDecimals::encode($payload),
             'response_payload' => $result->rawBody,
             'hotels_returned' => $total,
+            'availability_source' => AvailabilitySearchResult::LIVE_HBX,
             'search_fingerprint' => $fingerprint,
             'expires_at' => $now->copy()->addSeconds($ttl),
             'last_accessed_at' => $now,

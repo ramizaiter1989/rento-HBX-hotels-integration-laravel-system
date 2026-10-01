@@ -49,6 +49,25 @@ return [
         'bookings' => '/hotel-api/1.0/bookings',
         'content_hotel_detail' => '/hotel-content-api/1.0/hotels/{hotelCode}/details',
         'content_hotels' => '/hotel-content-api/1.0/hotels',
+        /*
+        | Hotelbeds Content API 1.0 reference catalogs.
+        | Zones are nested inside destinations. Room characteristic labels are
+        | not a separate catalog; codes are taken from types/rooms.
+        */
+        'reference' => [
+            'facility-groups' => '/hotel-content-api/1.0/types/facilitygroups',
+            'facilities' => '/hotel-content-api/1.0/types/facilities',
+            'rooms' => '/hotel-content-api/1.0/types/rooms',
+            'categories' => '/hotel-content-api/1.0/types/categories',
+            'category-groups' => '/hotel-content-api/1.0/types/groupcategories',
+            'chains' => '/hotel-content-api/1.0/types/chains',
+            'accommodations' => '/hotel-content-api/1.0/types/accommodations',
+            'boards' => '/hotel-content-api/1.0/types/boards',
+            'segments' => '/hotel-content-api/1.0/types/segments',
+            'image-types' => '/hotel-content-api/1.0/types/imagetypes',
+            'countries' => '/hotel-content-api/1.0/locations/countries',
+            'destinations' => '/hotel-content-api/1.0/locations/destinations',
+        ],
     ],
 
     /*
@@ -62,6 +81,13 @@ return [
         'get_retry_base_ms' => max(0, (int) env('HBX_CONTENT_GET_RETRY_BASE_MS', 250)),
         'get_retry_cap_ms' => max(0, (int) env('HBX_CONTENT_GET_RETRY_CAP_MS', 2000)),
         'photo_thumbnail_base' => 'https://photos.hotelbeds.com/giata/small',
+        'reference_batch_size' => PositiveConfigInt::from(env('HBX_CONTENT_REFERENCE_BATCH', 100), 100),
+        /*
+        | Empty disables the differential content schedule. This is a Rento
+        | operations choice. The HBX TEST quota may not support a daily run.
+        | Example: 0 3 * * *
+        */
+        'differential_schedule' => env('HBX_CONTENT_DIFFERENTIAL_SCHEDULE'),
     ],
 
     /*

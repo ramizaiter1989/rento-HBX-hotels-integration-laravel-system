@@ -7,6 +7,7 @@ namespace App\Services\HBX;
 use App\Exceptions\HBX\HbxValidationException;
 use App\Models\HotelSearch;
 use App\Models\RateSelection;
+use App\Support\DecimalString;
 use App\Support\JsonDecimals;
 use App\Support\PositiveConfigInt;
 use Illuminate\Support\Carbon;
@@ -134,6 +135,9 @@ final class HbxCheckRateService
             'rate_type' => $presented['rate_type'] ?? $sourceRate['rateType'] ?? 'BOOKABLE',
             'rate_class' => $presented['rate_class'],
             'net' => $presented['net'],
+            'availability_net' => $selection?->availability_net
+                ?? DecimalString::from($sourceRate['net'] ?? null)
+                ?? $selection?->net,
             'currency' => $hotel['currency'] ?? $sourceHotel['currency'] ?? null,
             'allotment' => $presented['allotment'],
             'board_code' => $presented['board_code'],

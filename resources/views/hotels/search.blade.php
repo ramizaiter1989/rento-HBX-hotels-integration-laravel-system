@@ -2,6 +2,7 @@
     <div class="mb-6">
         <h1 class="text-2xl font-semibold tracking-tight">Hotel search</h1>
         <p class="mt-1 max-w-3xl text-sm text-slate-600">Availability is a snapshot. Use one filter only: a destination code or hotel codes. PMI is the default TEST example, not the only destination.</p>
+        <p class="mt-2 text-xs text-slate-500">Search → Results → Hotel → Room/rate → CheckRate → Guest details → Booking → Confirmation</p>
     </div>
 
     <form method="POST" action="{{ route('hotels.search.store') }}" class="card p-6" x-data="{ sending: false, children: {{ (int) old('children', $defaults['children']) }} }" @submit="sending = true">

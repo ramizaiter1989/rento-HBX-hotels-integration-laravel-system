@@ -3,11 +3,13 @@
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\CheckRateController;
 use App\Http\Controllers\ContentHotelController;
+use App\Http\Controllers\ContentSyncDashboardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeveloperReferenceController;
 use App\Http\Controllers\HbxBookingListController;
 use App\Http\Controllers\HbxLogController;
 use App\Http\Controllers\HbxStatusController;
+use App\Http\Controllers\HbxTestMatrixController;
 use App\Http\Controllers\HotelSearchController;
 use App\Http\Controllers\RateSelectionController;
 use Illuminate\Support\Facades\Route;
@@ -42,4 +44,6 @@ Route::get('/hbx/status', [HbxStatusController::class, 'show'])->name('hbx.statu
 Route::post('/hbx/status', [HbxStatusController::class, 'test'])->name('hbx.status.test');
 
 Route::get('/developer/hbx/logs', HbxLogController::class)->name('developer.logs');
+Route::get('/developer/hbx/sync', ContentSyncDashboardController::class)->name('developer.sync');
+Route::get('/developer/hbx/test-matrix', HbxTestMatrixController::class)->name('developer.test-matrix');
 Route::get('/developer/reference', DeveloperReferenceController::class)->name('developer.reference');

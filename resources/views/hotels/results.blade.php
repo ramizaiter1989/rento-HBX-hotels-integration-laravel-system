@@ -10,11 +10,15 @@
             <p class="mt-1 text-sm text-slate-600">{{ $hotels->total() }} hotels in this stored snapshot. This page shows {{ $hotels->count() }} of them. Changing page does not call HBX.</p>
             <p class="mt-1 text-sm text-slate-600">
                 Stored {{ $search->created_at?->format('Y-m-d H:i:s') }}
+                · Snapshot age {{ $search->created_at?->diffForHumans() ?? 'unknown' }}
                 · Expires {{ $search->expires_at?->format('Y-m-d H:i:s') ?? 'not set' }}
-                @if (session('availability_source') === 'CACHE_HIT')
-                    · Reused snapshot
-                @elseif (session('availability_source') === 'LIVE_HBX')
-                    · Fresh HBX call
+                · Availability source
+                @if (($search->availability_source ?? session('availability_source')) === 'CACHE_HIT')
+                    CACHE
+                @elseif (($search->availability_source ?? session('availability_source')) === 'LIVE_HBX')
+                    LIVE
+                @else
+                    STORED SNAPSHOT
                 @endif
             </p>
         </div>
@@ -36,8 +40,12 @@
                     <p><span class="text-slate-500">Hotel</span> {{ $selection->hotel_name }} ({{ $selection->hotel_code }})</p>
                     <p><span class="text-slate-500">Room</span> {{ $selection->room_name }} · {{ $selection->room_code }}</p>
                     <p><span class="text-slate-500">Current rate type</span> {{ $selection->rate_type }}</p>
-                    <p><span class="text-slate-500">Net</span> <x-money :amount="$selection->net" :currency="$selection->currency" /></p>
+                    <p><span class="text-slate-500">CheckRate net</span> <x-money :amount="$selection->net" :currency="$selection->currency" /></p>
+                    <p><span class="text-slate-500">Availability net</span> <x-money :amount="$selection->availability_net ?? $selection->net" :currency="$selection->currency" /></p>
                     <p><span class="text-slate-500">CheckRate</span> {{ $selection->checkrate_completed_at ? 'Completed '.$selection->checkrate_completed_at->format('Y-m-d H:i:s') : 'Not run' }}</p>
+                    @if ($selection->availability_net !== null && (string) $selection->availability_net !== (string) $selection->net)
+                        <p class="text-amber-800">Price changed. Availability and CheckRate nets differ. Booking uses the CheckRate net only after this page shows the change.</p>
+                    @endif
                     <p><span class="text-slate-500">Rate valid until</span> {{ $selection->valid_until?->format('Y-m-d H:i:s') ?? 'not set' }}</p>
                     <p><span class="text-slate-500">paymentDataRequired</span> {{ $selection->payment_data_required === null ? '—' : ($selection->payment_data_required ? 'true' : 'false') }}</p>
                 </div>
@@ -64,6 +72,7 @@
 
     <div class="space-y-4">
         @foreach ($hotels as $hotel)
+            @php $content = $enrichment[(string) $hotel['code']] ?? null; @endphp
             <article
                 class="card overflow-hidden"
                 data-rooms-url="{{ route('hotels.rooms', ['search' => $search, 'hotelCode' => $hotel['code']]) }}"
@@ -89,19 +98,44 @@
                 }"
             >
                 <div class="flex gap-4 p-5">
-                    <div class="hidden h-24 w-32 shrink-0 items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 px-2 text-center text-[11px] text-slate-500 sm:flex">
-                        No supplier image. Content API enrichment pending.
-                    </div>
+                    @if ($content && $content['image'])
+                        <img src="{{ $content['image'] }}" alt="" width="128" height="96" loading="lazy" class="hidden h-24 w-32 shrink-0 rounded-md bg-slate-100 object-cover sm:block">
+                    @else
+                        <div class="hidden h-24 w-32 shrink-0 items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 px-2 text-center text-[11px] text-slate-500 sm:flex">
+                            {{ $content ? 'No content image' : 'Content enrichment unavailable' }}
+                        </div>
+                    @endif
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
-                                <h2 class="text-lg font-semibold">{{ $hotel['name'] ?: 'Unnamed hotel' }}</h2>
+                                <h2 class="text-lg font-semibold">{{ $content['name'] ?? ($hotel['name'] ?: 'Unnamed hotel') }}</h2>
                                 <p class="mt-1 text-sm text-slate-600">
-                                    Code {{ $hotel['code'] }}
-                                    @if ($hotel['category']) · {{ $hotel['category'] }} @endif
-                                    @if ($hotel['destination_name'] || $hotel['destination_code']) · {{ $hotel['destination_name'] }} {{ $hotel['destination_code'] }} @endif
+                                    Supplier hotel code {{ $hotel['code'] }}
+                                    @if ($hotel['name'] && ($content['name'] ?? null) && $content['name'] !== $hotel['name'])
+                                        · Availability name {{ $hotel['name'] }}
+                                    @endif
+                                    @if ($content['category_code'] ?? $hotel['category'])
+                                        · {{ $content['category_code'] ?? '' }} {{ $content['category_label'] ?? $hotel['category'] }}
+                                    @endif
+                                    @if ($hotel['destination_name'] || $hotel['destination_code'] || ($content['destination_label'] ?? null))
+                                        · {{ $content['destination_label'] ?? $hotel['destination_name'] }} {{ $hotel['destination_code'] }}
+                                    @endif
                                     @if ($hotel['zone']) · {{ $hotel['zone'] }} @endif
+                                    @if ($content['city'] ?? null) · {{ $content['city'] }} @endif
+                                    @if ($content) · Content {{ $content['origin'] ?? 'stored' }} @endif
                                 </p>
+                                @if ($content['description'] ?? null)
+                                    <p class="mt-2 text-sm text-slate-700">{{ $content['description'] }}</p>
+                                @endif
+                                @if ($content['facilities'] ?? [])
+                                    <p class="mt-2 text-xs text-slate-600">
+                                        @foreach ($content['facilities'] as $facility)
+                                            <span class="mr-2">{{ $facility['code'] }}@if ($facility['label']) {{ $facility['label'] }}@endif</span>
+                                        @endforeach
+                                    </p>
+                                @elseif (! $content)
+                                    <p class="mt-2 text-xs text-slate-500">Content enrichment unavailable. The availability hotel is still listed.</p>
+                                @endif
                                 @if ($hotel['latitude'] || $hotel['longitude'])
                                     <p class="mt-1 text-xs text-slate-500">{{ $hotel['latitude'] }}, {{ $hotel['longitude'] }}</p>
                                 @endif

@@ -1,94 +1,28 @@
 # Rento HBX Hotels Integration Laravel Lab
 
-Project: Rento HBX Hotels Integration Laravel Lab
+This is a local HBX / Hotelbeds laboratory for Rento Dubai. It is the reference Rami can run, test against HBX TEST, and then transform into the production system. It is not the production application.
+
+Branch: `moamen-hbx-lab`
+
+Do not commit `.env`. Do not put secrets in this file.
+
+## Stack
+
+- PHP 8.3+
+- Laravel 13
+- MySQL 8
+- Blade, Alpine, Tailwind, Vite
+- PHPUnit
 
 Local URL: http://127.0.0.1:8000
 
 Database: `rento_hbx_lab`
 
-This branch is a working copy of the local lab, including the current `.env`. Hotel rows live in that MySQL database. They are not exported in git. Migrations recreate the schema.
+HBX TEST base URL: `https://api.test.hotelbeds.com`
 
-## Current implemented areas
+Hotel rows live in MySQL. They are not in git. Migrations recreate the schema.
 
-- HBX Booking API
-- Availability
-- CheckRate
-- booking persistence
-- booking management
-- cancellation simulation
-- actual cancellation
-- Content API
-- single Hotel Details import
-- bulk Hotels synchronization
-- Details-over-list precedence
-- Content Lab
-- resumable C6 synchronization
-- checkpointing
-- sync stop/status commands
-- transient Content GET retries
-
-## Current Content Lab
-
-- http://127.0.0.1:8000/content
-- http://127.0.0.1:8000/content/hotels
-- http://127.0.0.1:8000/content/hotels/712
-
-## Current content state
-
-- 1000-hotel acceptance completed successfully
-- Failed: 0
-- Conflicts: 0
-- Details retained: 1
-- hotel 712 is stored from Hotel Details
-- other synchronized hotels normally use `content_origin=list`
-
-## C6
-
-- `content_sync_runs`
-- `--resume`
-- `hbx:content:sync-status`
-- `hbx:content:sync-stop`
-- checkpoint after each completed page
-
-## HBX TEST account
-
-- max quota 50 requests
-- quota reset interval 86400 seconds
-- 8 requests per 4 seconds
-
-## Current 10,000-hotel acceptance run
-
-- Run 2
-- status failed because supplier returned HTTP 403
-- fetched 0
-- next from 1
-
-Resume command:
-
-```text
-php artisan hbx:content:sync-hotels --resume
-```
-
-## Next Content development area
-
-HBX reference/master data including:
-
-- facilities
-- facility groups
-- room types
-- room characteristics
-- categories
-- category groups
-- chains
-- accommodation types
-- boards
-- segments
-- image types
-- countries
-- destinations
-- zones
-
-## Checkout
+## Install
 
 ```text
 git clone -b moamen-hbx-lab https://github.com/ramizaiter1989/rento-HBX-hotels-integration-laravel-system.git
@@ -96,8 +30,75 @@ cd rento-HBX-hotels-integration-laravel-system
 composer install
 npm install
 npm run build
+copy .env.example .env
+php artisan key:generate
+```
+
+Set `DB_*`, `HBX_API_KEY`, and `HBX_SECRET` in the local `.env`. Then:
+
+```text
 php artisan migrate
 php artisan serve
 ```
 
-`.env` is already in this branch. Use the MySQL database it names. Do not replace it with `.env.example`.
+## HBX TEST quota
+
+Observed on the TEST account:
+
+- 50 requests per quota window
+- reset interval 86400 seconds
+- 8 requests per 4 seconds
+
+Do not bypass these limits.
+
+## Current live acceptance
+
+- Hotel 712 was imported from Hotel Details. Origin stays `details`. Hash `b44f3024b023132755c3a877082a612cfed1402ae31bde2673515c27e03f28d1`.
+- A 1000-hotel list sync completed: Fetched 1000, Imported 14, Updated 0, Unchanged 986, Failed 0, Details retained 1, Conflicts 0.
+- The 10,000-hotel run was not completed. Run 2 returned HTTP 403, fetched 0, next from 1, because the TEST quota was exhausted.
+- Reference sync, the content/availability merge, and a fresh booking lifecycle still need a manual HBX pass. Automated tests do not count as live verification.
+- Actual booking modification is not implemented. It waits for a confirmed supplier contract.
+
+## Commands
+
+```text
+php artisan hbx:status
+php artisan hbx:content:sync-hotels --language=ENG --batch=50
+php artisan hbx:content:sync-hotels --language=ENG --last-update=YYYY-MM-DD
+php artisan hbx:content:sync-hotels --resume
+php artisan hbx:content:sync-status
+php artisan hbx:content:sync-stop
+php artisan hbx:content:sync-reference --language=ENG
+php artisan hbx:availability:cleanup
+```
+
+The 10,000-hotel command is documented in the test plan. Do not run it until quota across several windows is available:
+
+```text
+php artisan hbx:content:sync-hotels --language=ENG --batch=50 --limit=10000
+```
+
+Differential sync is not scheduled unless `HBX_CONTENT_DIFFERENTIAL_SCHEDULE` is set.
+
+## Lab URLs
+
+- http://127.0.0.1:8000/hotels/search
+- http://127.0.0.1:8000/content/hotels
+- http://127.0.0.1:8000/content/hotels/712
+- http://127.0.0.1:8000/bookings
+- http://127.0.0.1:8000/developer/hbx/sync
+- http://127.0.0.1:8000/developer/hbx/test-matrix
+- http://127.0.0.1:8000/developer/content/hotels/712/snapshot
+
+Content Lab, the sync dashboard, and the test matrix do not call HBX when opened.
+
+## Documents
+
+- [docs/HBX_FINAL_LAB_TEST_PLAN.md](docs/HBX_FINAL_LAB_TEST_PLAN.md)
+- [docs/RENTO_DUBAI_PRODUCTION_INTEGRATION_GUIDE.md](docs/RENTO_DUBAI_PRODUCTION_INTEGRATION_GUIDE.md)
+- [docs/HBX_LAB_ARCHITECTURE.md](docs/HBX_LAB_ARCHITECTURE.md)
+- [docs/HBX_LAB_COMMANDS_AND_ROUTES.md](docs/HBX_LAB_COMMANDS_AND_ROUTES.md)
+
+## Next production step
+
+Use the production integration guide. Carry the client, importer, availability cache, CheckRate, booking, and checkpoint patterns into Rento Dubai. Keep developer pages and this unauthenticated lab UI behind.

@@ -8,6 +8,7 @@ use App\DTOs\HBX\ContentImportResult;
 use App\DTOs\HBX\ContentSyncResult;
 use App\DTOs\HBX\HbxResult;
 use App\Exceptions\HBX\HbxValidationException;
+use App\Models\ContentSyncFailure;
 use App\Models\ContentSyncRun;
 use App\Support\JsonDecimals;
 use Throwable;
@@ -156,7 +157,7 @@ final class HbxContentHotelSyncService
             $returned = count($hotels);
 
             foreach ($hotels as $hotel) {
-                $this->importHotel($hotel, $version, $processTime, $timestamp, $language, $counts, $onFailure);
+                $this->importHotel($hotel, $version, $processTime, $timestamp, $language, $counts, $onFailure, $run);
             }
 
             $counts->fetched += $returned;
@@ -250,9 +251,11 @@ final class HbxContentHotelSyncService
         string $language,
         ContentSyncResult $counts,
         ?callable $onFailure,
+        ContentSyncRun $run,
     ): void {
         if (! is_array($hotel)) {
             $counts->failed++;
+            $this->recordFailure($run, null, 'invalid-payload', 'Content hotel must be an object.');
             if ($onFailure !== null) {
                 $onFailure('unknown', 'Content hotel must be an object.');
             }
@@ -304,10 +307,22 @@ final class HbxContentHotelSyncService
             unset($normalized, $document, $raw, $synthetic, $imported);
         } catch (Throwable $exception) {
             $counts->failed++;
+            $message = strtok($exception->getMessage(), "\n") ?: 'Import failed.';
+            $this->recordFailure($run, $this->expectedCode($hotel), 'import', mb_substr($message, 0, 500));
             if ($onFailure !== null) {
                 $onFailure($code, $exception->getMessage());
             }
         }
+    }
+
+    private function recordFailure(ContentSyncRun $run, ?int $hotelCode, string $type, string $message): void
+    {
+        ContentSyncFailure::query()->create([
+            'content_sync_run_id' => $run->id,
+            'hbx_hotel_code' => $hotelCode,
+            'failure_type' => $type,
+            'message' => mb_substr($message, 0, 500),
+        ]);
     }
 
     private function assertRange(int $batch, int $from, ?int $limit): void

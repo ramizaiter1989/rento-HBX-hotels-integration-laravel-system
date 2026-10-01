@@ -54,7 +54,12 @@
                                 <td class="px-4 py-3">{{ $translation->city ?? '—' }}</td>
                                 <td class="px-4 py-3">{{ $hotel->country_code ?: '—' }}</td>
                                 <td class="px-4 py-3">{{ $hotel->destination_code ?: '—' }}</td>
-                                <td class="px-4 py-3">{{ $hotel->category_code ?: '—' }}</td>
+                                <td class="px-4 py-3">
+                                    {{ $hotel->category_code ?: '—' }}
+                                    @if ($categoryLabel = ($categoryLabels[$hotel->category_code] ?? null))
+                                        <span class="mt-1 block text-xs text-slate-500">{{ $categoryLabel }}</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3">{{ $hotel->ranking ?? '—' }}</td>
                                 <td class="px-4 py-3">
                                     @if ($origin)

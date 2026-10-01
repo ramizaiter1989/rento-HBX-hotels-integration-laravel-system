@@ -20,7 +20,12 @@
             <div><dt class="text-slate-500">Stay</dt><dd>{{ $search->check_in->toDateString() }} → {{ $search->check_out->toDateString() }}</dd></div>
             <div><dt class="text-slate-500">Room</dt><dd>{{ $selection->room_name }} · {{ $selection->room_code }}</dd></div>
             <div><dt class="text-slate-500">Board</dt><dd>{{ $selection->board_code }} {{ $selection->board_name }}</dd></div>
-            <div><dt class="text-slate-500">Net</dt><dd><x-money :amount="$selection->net" :currency="$selection->currency" /></dd></div>
+            <div><dt class="text-slate-500">Availability net</dt><dd><x-money :amount="$selection->availability_net ?? $selection->net" :currency="$selection->currency" /></dd></div>
+            <div><dt class="text-slate-500">CheckRate net</dt><dd><x-money :amount="$selection->net" :currency="$selection->currency" /></dd></div>
+            <div><dt class="text-slate-500">CheckRate time</dt><dd>{{ $selection->checkrate_completed_at?->format('Y-m-d H:i:s') ?? 'Not run' }}</dd></div>
+            @if ($selection->availability_net !== null && (string) $selection->availability_net !== (string) $selection->net)
+                <div class="md:col-span-2 text-amber-800">Price changed. Do not book until this difference is accepted. Booking sends the CheckRate net.</div>
+            @endif
             <div><dt class="text-slate-500">Rate valid until</dt><dd>{{ $selection->valid_until?->format('Y-m-d H:i:s') ?? 'not set' }}</dd></div>
             <div><dt class="text-slate-500">paymentDataRequired</dt><dd>{{ $selection->payment_data_required === null ? 'Not returned' : ($selection->payment_data_required ? 'true' : 'false — this does not mean the stay is free') }}</dd></div>
         </dl>

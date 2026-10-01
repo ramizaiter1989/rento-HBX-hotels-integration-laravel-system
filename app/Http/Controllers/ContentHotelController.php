@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\ContentHotel;
+use App\Services\HBX\ContentReferenceStore;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -12,7 +13,7 @@ use JsonException;
 
 class ContentHotelController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, ContentReferenceStore $references): View
     {
         $language = $this->language($request);
         $term = trim((string) $request->query('q', ''));
@@ -42,10 +43,15 @@ class ContentHotelController extends Controller
             'hotels' => $hotels,
             'language' => $language,
             'term' => $term,
+            'categoryLabels' => $references->descriptionsForCodes(
+                'categories',
+                $hotels->getCollection()->pluck('category_code')->filter()->all(),
+                $language,
+            ),
         ]);
     }
 
-    public function show(Request $request, int $hotelCode): View
+    public function show(Request $request, int $hotelCode, ContentReferenceStore $references): View
     {
         $language = $this->language($request);
         $hotel = $this->hotel($hotelCode);
@@ -69,6 +75,7 @@ class ContentHotelController extends Controller
             'language' => $language,
             'translation' => $hotel->translations->firstWhere('language', $language),
             'snapshot' => $hotel->snapshots->firstWhere('language', $language),
+            'labels' => $references->labelsForHotel($hotel, $language),
         ]);
     }
 
