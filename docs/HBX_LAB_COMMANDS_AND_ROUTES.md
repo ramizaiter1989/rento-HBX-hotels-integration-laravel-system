@@ -27,6 +27,8 @@ Supplier call means the action contacts HBX. Commercial write means the action c
 
 `--limit` on a new run is the stored hotel target. Resume uses the remaining amount (`requested_limit - fetched`) and ignores a new `--limit`. A completed target cannot be resumed. A command without `--limit` is an explicit unlimited sync. `hbx:content:sync-status` and the sync dashboard show Requested target, Fetched total, and Remaining.
 
+A hotel sync run accepts one worker. A second resume of that same run is refused until the first worker finishes or its claim expires. Two different runs, including a full run and a differential run, stay independent.
+
 `hbx:content:sync-abandon {run}` sets a failed or stopped run to `abandoned`. It keeps the checkpoint and statistics and does not delete imported Content. Resume never continues an abandoned run. A completed run cannot be abandoned. A running run cannot be abandoned either: stop it with `hbx:content:sync-stop`, wait until its status is `stopped`, then abandon that id. The active worker does not watch for `abandoned`, and its checkpoint would replace that status.
 
 `--type=zones` reads destinations, because zones are nested in that payload. `--type=room-types` and `--type=room-characteristics` read the rooms catalog. There is no separate characteristic-description endpoint.

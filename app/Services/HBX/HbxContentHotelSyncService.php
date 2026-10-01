@@ -11,6 +11,8 @@ use App\Exceptions\HBX\HbxValidationException;
 use App\Models\ContentSyncFailure;
 use App\Models\ContentSyncRun;
 use App\Support\JsonDecimals;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Throwable;
 
 final class HbxContentHotelSyncService
@@ -20,6 +22,14 @@ final class HbxContentHotelSyncService
      * default batch is a few thousand pages, so this is only a loop guard.
      */
     private const MAX_PAGES = 20000;
+
+    /**
+     * One active hotel-sync worker per run. Refreshed on each page. A dead
+     * process releases the claim when this window expires.
+     */
+    private const WORKER_LOCK_SECONDS = 600;
+
+    public const WORKER_LOCK_PREFIX = 'hbx-content-sync-run-';
 
     private bool $stopRequested = false;
 
@@ -45,6 +55,44 @@ final class HbxContentHotelSyncService
         ?callable $onFailure = null,
     ): ContentSyncResult {
         $this->assertRange($batch, $from, $limit);
+        $owner = (string) Str::uuid();
+        $workerKey = self::WORKER_LOCK_PREFIX.$run->id;
+
+        if (! Cache::add($workerKey, $owner, self::WORKER_LOCK_SECONDS)) {
+            throw new HbxValidationException(
+                'Another worker is already processing content sync run '.$run->id.'.',
+                'SYNC_WORKER_ACTIVE',
+                null,
+                [],
+                'content_hotels'
+            );
+        }
+
+        try {
+            return $this->syncWhileOwned($language, $batch, $from, $limit, $lastUpdate, $run, $workerKey, $owner, $onPage, $onFailure);
+        } finally {
+            if (Cache::get($workerKey) === $owner) {
+                Cache::forget($workerKey);
+            }
+        }
+    }
+
+    /**
+     * @param  callable(int, int, ?int): void|null  $onPage
+     * @param  callable(string, string): void|null  $onFailure
+     */
+    private function syncWhileOwned(
+        string $language,
+        int $batch,
+        int $from,
+        ?int $limit,
+        ?string $lastUpdate,
+        ContentSyncRun $run,
+        string $workerKey,
+        string $owner,
+        ?callable $onPage,
+        ?callable $onFailure,
+    ): ContentSyncResult {
         $counts = $this->countsFrom($run);
         $started = hrtime(true);
         $position = $from;
@@ -65,6 +113,7 @@ final class HbxContentHotelSyncService
 
         while (true) {
             $run->refresh();
+            $this->keepWorker($workerKey, $owner);
 
             if ($run->stop_requested || $this->stopRequested) {
                 $finishStatus = ContentSyncRun::STOPPED;
@@ -184,6 +233,21 @@ final class HbxContentHotelSyncService
         $counts->durationSeconds = (hrtime(true) - $started) / 1_000_000_000;
 
         return $counts;
+    }
+
+    private function keepWorker(string $workerKey, string $owner): void
+    {
+        if (Cache::get($workerKey) !== $owner) {
+            throw new HbxValidationException(
+                'This content sync worker lost content sync run '.substr($workerKey, strlen(self::WORKER_LOCK_PREFIX)).'.',
+                'SYNC_WORKER_LOST',
+                null,
+                [],
+                'content_hotels'
+            );
+        }
+
+        Cache::put($workerKey, $owner, self::WORKER_LOCK_SECONDS);
     }
 
     private function countsFrom(ContentSyncRun $run): ContentSyncResult

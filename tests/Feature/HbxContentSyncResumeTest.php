@@ -6,7 +6,9 @@ use App\Exceptions\HBX\HbxAmbiguousResultException;
 use App\Models\ContentHotel;
 use App\Models\ContentSyncRun;
 use App\Services\HBX\HbxClient;
+use App\Services\HBX\HbxContentHotelSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -156,6 +158,35 @@ class HbxContentSyncResumeTest extends TestCase
 
         Http::assertNothingSent();
         $this->assertSame(ContentSyncRun::COMPLETED, ContentSyncRun::query()->firstOrFail()->status);
+    }
+
+    #[Test]
+    public function a_second_worker_cannot_process_the_same_run(): void
+    {
+        $run = ContentSyncRun::query()->create([
+            'sync_type' => ContentSyncRun::FULL,
+            'language' => 'ENG',
+            'batch_size' => 1,
+            'next_from' => 1,
+            'fetched' => 0,
+            'requested_limit' => 4,
+            'status' => ContentSyncRun::FAILED,
+            'started_at' => now(),
+            'last_progress_at' => now(),
+        ]);
+        Cache::add(HbxContentHotelSyncService::WORKER_LOCK_PREFIX.$run->id, 'other-worker', 600);
+        Http::fake();
+
+        $this->artisan('hbx:content:sync-hotels', ['--resume' => true])
+            ->expectsOutputToContain('Another worker is already processing content sync run '.$run->id)
+            ->assertFailed();
+
+        Http::assertNothingSent();
+        $run->refresh();
+        $this->assertSame(ContentSyncRun::FAILED, $run->status);
+        $this->assertSame(0, $run->fetched);
+        $this->assertSame(1, $run->next_from);
+        $this->assertSame(4, $run->requested_limit);
     }
 
     #[Test]
