@@ -36,6 +36,7 @@ class ContentSyncDashboardController extends Controller
                 'Resume' => 'php artisan hbx:content:sync-hotels --resume',
                 'Status' => 'php artisan hbx:content:sync-status',
                 'Stop' => 'php artisan hbx:content:sync-stop',
+                'Abandon' => 'php artisan hbx:content:sync-abandon {run}',
                 'Reference sync' => 'php artisan hbx:content:sync-reference --language=ENG',
             ],
         ]);

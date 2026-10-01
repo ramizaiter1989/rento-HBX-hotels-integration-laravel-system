@@ -19,12 +19,15 @@ Supplier call means the action contacts HBX. Commercial write means the action c
 | `php artisan hbx:content:sync-hotels --resume --last-update=YYYY-MM-DD` | Resume the matching differential run | Yes | No |
 | `php artisan hbx:content:sync-status` | Print stored sync runs | No | No |
 | `php artisan hbx:content:sync-stop` | Ask the running sync to stop after the current page | No | No |
+| `php artisan hbx:content:sync-abandon {run}` | Close a running, failed, or stopped run so resume will not select it | No | No |
 | `php artisan hbx:content:sync-reference --language=ENG` | Import all reference catalogs | Yes | No |
 | `php artisan hbx:content:sync-reference --language=ENG --type=facilities` | Import one catalog | Yes | No |
 | `php artisan hbx:availability:cleanup` | Delete expired availability snapshots past retention | No | No |
 | `php artisan test` | Automated suite. Must not call HBX | No | No |
 
 `--limit` on a new run is the stored hotel target. Resume uses the remaining amount (`requested_limit - fetched`) and ignores a new `--limit`. A completed target cannot be resumed. A command without `--limit` is an explicit unlimited sync. `hbx:content:sync-status` and the sync dashboard show Requested target, Fetched total, and Remaining.
+
+`hbx:content:sync-abandon {run}` sets that run to `abandoned`. It keeps the checkpoint and statistics and does not delete imported Content. Resume never continues an abandoned run. A completed run cannot be abandoned.
 
 `--type=zones` reads destinations, because zones are nested in that payload. `--type=room-types` and `--type=room-characteristics` read the rooms catalog. There is no separate characteristic-description endpoint.
 

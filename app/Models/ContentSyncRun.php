@@ -23,6 +23,8 @@ class ContentSyncRun extends Model
 
     public const STOPPED = 'stopped';
 
+    public const ABANDONED = 'abandoned';
+
     protected $fillable = [
         'sync_type',
         'language',

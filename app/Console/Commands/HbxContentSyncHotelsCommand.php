@@ -167,6 +167,16 @@ class HbxContentSyncHotelsCommand extends Command implements SignalableCommandIn
             );
         }
 
+        if ($run->status === ContentSyncRun::ABANDONED) {
+            throw new HbxValidationException(
+                'The latest '.$type.' content sync run was abandoned and cannot be resumed.',
+                'INVALID_DATA',
+                null,
+                [],
+                'content_hotels'
+            );
+        }
+
         if ($run->status === ContentSyncRun::COMPLETED || $run->targetReached()) {
             $reason = $run->targetReached()
                 ? 'already reached its requested limit and cannot be resumed.'

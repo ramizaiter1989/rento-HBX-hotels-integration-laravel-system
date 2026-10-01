@@ -68,6 +68,7 @@ php artisan hbx:content:sync-hotels --language=ENG --last-update=YYYY-MM-DD
 php artisan hbx:content:sync-hotels --resume
 php artisan hbx:content:sync-status
 php artisan hbx:content:sync-stop
+php artisan hbx:content:sync-abandon {run}
 php artisan hbx:content:sync-reference --language=ENG
 php artisan hbx:availability:cleanup
 ```
@@ -78,7 +79,7 @@ The 10,000-hotel command is documented in the test plan. Do not run it until quo
 php artisan hbx:content:sync-hotels --language=ENG --batch=50 --limit=10000
 ```
 
-`--limit` is stored on the new run. Resume fetches only the remaining hotels. Run 2 has no stored target because it predates that column, so resuming it would not enforce 10,000. Start a new limited run when the ceiling matters.
+`--limit` is stored on the new run. Resume fetches only the remaining hotels. Run 2 has no stored target because it predates that column. It is abandoned locally, so resume will not continue it. Start a new limited run when the ceiling matters.
 
 Differential sync is not scheduled unless `HBX_CONTENT_DIFFERENTIAL_SCHEDULE` is set.
 
